@@ -118,3 +118,17 @@ HTTP/1.1 201 Created
   around the notify call happens after storage already committed, so a
   broken email provider can never turn a successful submission into a
   failed request.
+
+  ## Dashboard API
+- [x] Owner dashboard endpoints work and are tenant-isolated
+
+  GET /api/widgets/{id}/submissions -> returns all 15 test submissions
+  with correct geo data per row, matching earlier fallback-chain tests.
+
+  GET /api/widgets/{id}/stats -> {"total":15,"by_country":[{"country":
+  "United States","count":3}],"by_day":[{"date":"2026-08-16","count":15}]}
+
+  GET /api/dashboard/overview -> {"total_submissions":15,"by_widget":[...]}
+
+  Isolation re-verified: tenant B's token against tenant A's widget
+  submissions -> 404 Not Found, same pattern as widget CRUD.

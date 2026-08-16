@@ -59,6 +59,7 @@ class WidgetResponse(BaseModel):
     class Config:
         from_attributes = True
 
+
 class SubmissionCreate(BaseModel):
     widget_id: str
     data: dict
@@ -68,6 +69,18 @@ class SubmissionCreate(BaseModel):
 class SubmissionResponse(BaseModel):
     id: uuid.UUID
     widget_id: uuid.UUID
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class SubmissionListItem(BaseModel):
+    id: uuid.UUID
+    data: dict
+    geo_country: Optional[str]
+    geo_city: Optional[str]
+    spam_flagged: bool
     created_at: datetime
 
     class Config:

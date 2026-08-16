@@ -4,7 +4,7 @@ from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from app.database import Base, engine
 from app.models import tenant, widget, submission
-from app.routers import auth, widgets, public, submissions
+from app.routers import auth, widgets, public, submissions, dashboard
 from app.routers.submissions import limiter
 
 app = FastAPI(title="Widget Platform API")
@@ -25,6 +25,7 @@ app.include_router(auth.router)
 app.include_router(widgets.router)
 app.include_router(public.router)
 app.include_router(submissions.router)
+app.include_router(dashboard.router)
 
 
 @app.get("/")
