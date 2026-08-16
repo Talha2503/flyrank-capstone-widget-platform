@@ -3,10 +3,10 @@ uvicorn
 sqlalchemy
 psycopg[binary]
 python-dotenv
-pydantic
+pydantic[email]
 pydantic-settings
 python-jose[cryptography]
-passlib[bcrypt]
+bcrypt
 slowapi
 httpx
 pytest
