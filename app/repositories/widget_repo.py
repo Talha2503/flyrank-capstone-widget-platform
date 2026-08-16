@@ -35,3 +35,6 @@ def update(db: Session, widget: Widget, data: dict) -> Widget:
 def delete(db: Session, widget: Widget) -> None:
     db.delete(widget)
     db.commit()
+
+def get_by_id_public(db: Session, widget_id: str) -> Widget | None:
+    return db.query(Widget).filter(Widget.id == widget_id).first()
