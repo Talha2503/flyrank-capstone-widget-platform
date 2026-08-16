@@ -17,3 +17,26 @@ HTTP/1.1 404 Not Found
   would leak that the resource exists). Isolation is enforced at the query
   layer in `widget_repo.get_by_id_for_tenant`, which filters by both
   `id` AND `tenant_id` in the same WHERE clause.
+
+  ## Public submission API
+- [x] Cross-origin submissions work (CORS + preflight)
+
+curl.exe -i -X OPTIONS http://localhost:8000/submissions -H "Origin: http://localhost:5500" -H "Access-Control-Request-Method: POST"
+
+HTTP/1.1 200 OK
+access-control-allow-origin: *
+access-control-allow-methods: GET, POST, OPTIONS
+
+
+- [x] Malformed/oversized payloads rejected with clean 4xx
+
+  Missing required field -> 400: `{"detail":"Field 'email' is required"}`
+  Unknown widget id -> 404: `{"detail":"Widget not found"}`
+  Oversized field value (3000 chars) -> 413: `{"detail":"Field 'email' is too long"}`
+
+- [x] Valid submissions stored, linked to correct widget + tenant
+
+curl.exe -i -X POST http://localhost:8000/submissions ...
+
+HTTP/1.1 201 Created
+{"id":"7ca4589a-9002-40f3-9ea1-1b2631130dde","widget_id":"5e0ce3b7-7a8d-49b1-a1b2-2017733c9bd8", ...}

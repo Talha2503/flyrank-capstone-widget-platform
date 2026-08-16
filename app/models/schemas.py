@@ -58,3 +58,17 @@ class WidgetResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+class SubmissionCreate(BaseModel):
+    widget_id: str
+    data: dict
+    website: str = ""  # honeypot field -- real users never fill this
+
+
+class SubmissionResponse(BaseModel):
+    id: uuid.UUID
+    widget_id: uuid.UUID
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
