@@ -6,6 +6,7 @@ from app.database import get_db
 from app.models.schemas import SubmissionCreate, SubmissionResponse
 from app.repositories import widget_repo, submission_repo
 from app.integrations.geo import enrich_ip
+from app.integrations.notify import send_confirmation_email
 
 router = APIRouter(tags=["submissions"])
 
@@ -44,8 +45,6 @@ def create_submission(payload: SubmissionCreate, request: Request, db: Session =
 
     client_ip = request.headers.get("X-Debug-IP") or (request.client.host if request.client else None)
 
-    # Enrichment is a courtesy, never a requirement -- enrich_ip() never
-    # raises, and its failure/unavailability must not block storage.
     geo = enrich_ip(client_ip)
 
     submission = submission_repo.create(db, {
@@ -57,5 +56,15 @@ def create_submission(payload: SubmissionCreate, request: Request, db: Session =
         "geo_city": geo["city"],
         "geo_provider_used": geo["provider_used"],
     })
+
+    # Safe side effect: the submission is ALREADY stored and this response
+    # will ALREADY return success by this point. A failure here is caught
+    # and logged, never re-raised -- a broken email provider must never
+    # turn a successful submission into a failed request.
+    try:
+        submitted_email = payload.data.get("email")
+        send_confirmation_email(submitted_email, widget.title)
+    except Exception as e:
+        print(f"[notify] side effect failed, submission still succeeds: {e}")
 
     return submission

@@ -100,3 +100,21 @@ HTTP/1.1 201 Created
   DB row: geo_country/geo_city/geo_provider_used all null, submission
   still stored successfully. Confirms enrichment failure never blocks
   the main path.
+
+  - [x] A failing confirmation email / webhook does not prevent the submission from being stored
+
+  Happy path:
+
+[notify] confirmation email sent to visitor@example.com for widget 'Newsletter Signup'
+HTTP/1.1 201 Created
+
+
+  Forced failure (FORCE_NOTIFY_DOWN=true, raises a real exception):
+
+[notify] side effect failed, submission still succeeds: Simulated email provider outage
+HTTP/1.1 201 Created
+
+  Submission still returns 201 and is stored either way -- the try/except
+  around the notify call happens after storage already committed, so a
+  broken email provider can never turn a successful submission into a
+  failed request.
