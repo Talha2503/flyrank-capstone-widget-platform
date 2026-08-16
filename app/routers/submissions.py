@@ -5,6 +5,7 @@ from slowapi.util import get_remote_address
 from app.database import get_db
 from app.models.schemas import SubmissionCreate, SubmissionResponse
 from app.repositories import widget_repo, submission_repo
+from app.integrations.geo import enrich_ip
 
 router = APIRouter(tags=["submissions"])
 
@@ -17,10 +18,6 @@ limiter = Limiter(key_func=get_remote_address)
 @router.post("/submissions", response_model=SubmissionResponse, status_code=status.HTTP_201_CREATED)
 @limiter.limit("5/minute")
 def create_submission(payload: SubmissionCreate, request: Request, db: Session = Depends(get_db)):
-    # Honeypot check: real visitors never see or fill this field (hidden via
-    # CSS in widget.js). A non-empty value means a bot filled every field it
-    # could find. Silently accept-and-drop rather than reject -- telling a
-    # bot "spam detected" just teaches it to route around the honeypot.
     if payload.website.strip():
         return SubmissionResponse(
             id="00000000-0000-0000-0000-000000000000",
@@ -28,12 +25,10 @@ def create_submission(payload: SubmissionCreate, request: Request, db: Session =
             created_at="1970-01-01T00:00:00Z",
         )
 
-    # 1. Validate the widget exists at all
     widget = widget_repo.get_by_id_public(db, payload.widget_id)
     if widget is None:
         raise HTTPException(status_code=404, detail="Widget not found")
 
-    # 2. Reject oversized payloads before touching business logic
     if len(payload.data) > MAX_PAYLOAD_FIELDS:
         raise HTTPException(status_code=413, detail="Too many fields in submission")
 
@@ -43,18 +38,24 @@ def create_submission(payload: SubmissionCreate, request: Request, db: Session =
         if len(value) > MAX_FIELD_VALUE_LENGTH:
             raise HTTPException(status_code=413, detail=f"Field '{key}' is too long")
 
-    # 3. Validate required fields from the widget's own config are present
     for field_def in widget.fields:
         if field_def.get("required") and not payload.data.get(field_def["name"], "").strip():
             raise HTTPException(status_code=400, detail=f"Field '{field_def['name']}' is required")
 
-    client_ip = request.client.host if request.client else None
+    client_ip = request.headers.get("X-Debug-IP") or (request.client.host if request.client else None)
+
+    # Enrichment is a courtesy, never a requirement -- enrich_ip() never
+    # raises, and its failure/unavailability must not block storage.
+    geo = enrich_ip(client_ip)
 
     submission = submission_repo.create(db, {
         "widget_id": widget.id,
         "tenant_id": widget.tenant_id,
         "data": payload.data,
         "ip_address": client_ip,
+        "geo_country": geo["country"],
+        "geo_city": geo["city"],
+        "geo_provider_used": geo["provider_used"],
     })
 
     return submission

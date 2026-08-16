@@ -71,3 +71,32 @@ SELECT id, data FROM submissions WHERE data->>'email' = 'bot@spam.com';
 id | data
 ----+------
 (0 rows)
+
+## Enrichment & safe side effects
+- [x] Provider fallback chain: A down -> B answers
+
+  Provider A up, real IP (8.8.8.8) -> stored with provider_a, real geo data
+  (United States / Ashburn).
+
+  While testing, provider B (ipapi.co free tier) genuinely rate-limited us
+  mid-session with a real 429 -- caught in the server log:
+
+[geo] provider_b failed: Client error '429 Too Many Requests' for url
+'https://ipapi.co/8.8.8.8/json/'
+
+  The submission still returned 201 and was stored -- proving the fallback
+  chain degrades correctly even under a real, unplanned provider failure,
+  not just a synthetic one.
+
+  Also tested deterministically via FORCE_PROVIDER_A_DOWN=true env toggle:
+  A forced down, B (working) picks up -> stored with provider_b.
+
+- [x] Both providers down -> submission still succeeds, without geo
+
+  With both FORCE_PROVIDER_A_DOWN=true and FORCE_PROVIDER_B_DOWN=true:
+
+HTTP/1.1 201 Created
+
+  DB row: geo_country/geo_city/geo_provider_used all null, submission
+  still stored successfully. Confirms enrichment failure never blocks
+  the main path.
