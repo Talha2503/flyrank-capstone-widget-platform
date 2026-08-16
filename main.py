@@ -1,15 +1,19 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
 from app.database import Base, engine
 from app.models import tenant, widget, submission
 from app.routers import auth, widgets, public, submissions
+from app.routers.submissions import limiter
 
 app = FastAPI(title="Widget Platform API")
 
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
 Base.metadata.create_all(bind=engine)
 
-# CORS: the public config + submission endpoints must be reachable from
-# any origin, since we don't control what site embeds the widget.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],

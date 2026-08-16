@@ -40,3 +40,34 @@ curl.exe -i -X POST http://localhost:8000/submissions ...
 
 HTTP/1.1 201 Created
 {"id":"7ca4589a-9002-40f3-9ea1-1b2631130dde","widget_id":"5e0ce3b7-7a8d-49b1-a1b2-2017733c9bd8", ...}
+
+## Abuse protection
+- [x] Rate limiting returns 429 under a burst, legit traffic still served
+
+  Fired 6 rapid requests against the same widget:
+
+Request 1 -> 201
+Request 2 -> 201
+Request 3 -> 201
+Request 4 -> 201
+Request 5 -> 201
+Request 6 -> 429
+
+  Limit is 5/minute per IP. After the window resets, normal requests
+  succeed again (confirmed manually).
+
+- [x] Spam control demonstrably blocks a spam submission
+
+  Submitted with the honeypot `website` field filled in (as a bot would):
+
+HTTP/1.1 201 Created
+{"id":"00000000-0000-0000-0000-000000000000", ...}
+
+  Response looks like success (so a bot can't detect it was caught), but
+  querying the database for that submission returns 0 rows -- it was
+  silently dropped before storage:
+
+SELECT id, data FROM submissions WHERE data->>'email' = 'bot@spam.com';
+id | data
+----+------
+(0 rows)

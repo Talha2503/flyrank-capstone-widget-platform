@@ -1,5 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 from app.database import get_db
 from app.models.schemas import SubmissionCreate, SubmissionResponse
 from app.repositories import widget_repo, submission_repo
@@ -9,9 +11,23 @@ router = APIRouter(tags=["submissions"])
 MAX_PAYLOAD_FIELDS = 30
 MAX_FIELD_VALUE_LENGTH = 2000
 
+limiter = Limiter(key_func=get_remote_address)
+
 
 @router.post("/submissions", response_model=SubmissionResponse, status_code=status.HTTP_201_CREATED)
+@limiter.limit("5/minute")
 def create_submission(payload: SubmissionCreate, request: Request, db: Session = Depends(get_db)):
+    # Honeypot check: real visitors never see or fill this field (hidden via
+    # CSS in widget.js). A non-empty value means a bot filled every field it
+    # could find. Silently accept-and-drop rather than reject -- telling a
+    # bot "spam detected" just teaches it to route around the honeypot.
+    if payload.website.strip():
+        return SubmissionResponse(
+            id="00000000-0000-0000-0000-000000000000",
+            widget_id=payload.widget_id,
+            created_at="1970-01-01T00:00:00Z",
+        )
+
     # 1. Validate the widget exists at all
     widget = widget_repo.get_by_id_public(db, payload.widget_id)
     if widget is None:
