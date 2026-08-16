@@ -1,10 +1,14 @@
 from fastapi import FastAPI
 from app.database import Base, engine
 from app.models import tenant, widget, submission
+from app.routers import auth, widgets
 
 app = FastAPI(title="Widget Platform API")
 
 Base.metadata.create_all(bind=engine)
+
+app.include_router(auth.router)
+app.include_router(widgets.router)
 
 
 @app.get("/")
