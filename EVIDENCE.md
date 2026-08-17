@@ -132,3 +132,23 @@ HTTP/1.1 201 Created
 
   Isolation re-verified: tenant B's token against tenant A's widget
   submissions -> 404 Not Found, same pattern as widget CRUD.
+
+  ## Widget delivery
+- [x] Embed snippet generated per widget (see Widget management section)
+- [x] Public config endpoint has correct HTTP cache headers
+  (cache-control: public, max-age=60 -- confirmed earlier)
+- [x] Widget JS served as a long-cache bundle
+  (cache-control: public, max-age=31536000, immutable)
+- [x] Widget renders on a page from a different origin
+
+  Created a plain HTML page at C:\dev\widget-customer-site\index.html,
+  served via `python -m http.server 5500` (a completely separate process
+  and origin from the API on port 8000). The page contains nothing but
+  the one embed <script> tag.
+
+  Opened http://localhost:5500 -- the widget rendered fully (title,
+  description, email field, submit button), all generated client-side
+  from the config fetched cross-origin from localhost:8000. Submitted
+  the form -- received "Thanks! Submitted successfully," confirming the
+  full cross-origin flow (config fetch + submission POST) works from a
+  genuinely separate origin, not just via curl.
