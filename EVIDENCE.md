@@ -152,3 +152,29 @@ HTTP/1.1 201 Created
   the form -- received "Thanks! Submitted successfully," confirming the
   full cross-origin flow (config fetch + submission POST) works from a
   genuinely separate origin, not just via curl.
+
+  ## Tests & documentation
+- [x] Automated tests cover CORS, invalid payload, oversized payload,
+      rate limiting, spam control, provider fallback, and rendering
+
+  19 pytest tests, all passing, run against an isolated test database
+  (widgets_test) that's wiped and recreated before every test:
+
+tests/test_geo_fallback.py::test_localhost_ip_skips_geo_lookup PASSED
+tests/test_geo_fallback.py::test_both_providers_down_still_succeeds PASSED
+tests/test_health.py (2 tests) PASSED
+tests/test_public_delivery.py (3 tests) PASSED
+tests/test_submissions.py (7 tests) PASSED
+- valid submission, missing required field, unknown widget,
+oversized field, CORS preflight, honeypot spam, rate limit burst
+tests/test_widgets.py (5 tests) PASSED
+- auth required, create+get, tenant isolation, version bump, delete
+
+19 passed in 14.97s
+
+
+  Debugging note: initial run had 3 false failures because slowapi's
+  in-memory rate limiter persists across the whole test session, not
+  per-test -- earlier tests were eating into later tests' rate-limit
+  budget. Fixed with an autouse fixture that calls limiter.reset()
+  before every test function.

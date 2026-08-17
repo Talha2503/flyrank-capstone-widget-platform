@@ -26,6 +26,15 @@ def clean_db():
     yield
 
 
+@pytest.fixture(scope="function", autouse=True)
+def reset_rate_limiter():
+    """Resets slowapi's in-memory rate-limit counters before every test,
+    so one test's requests don't eat into another test's budget."""
+    from app.routers.submissions import limiter
+    limiter.reset()
+    yield
+
+
 @pytest.fixture
 def client():
     return TestClient(app)
