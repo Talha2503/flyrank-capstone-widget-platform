@@ -178,3 +178,24 @@ tests/test_widgets.py (5 tests) PASSED
   per-test -- earlier tests were eating into later tests' rate-limit
   budget. Fixed with an autouse fixture that calls limiter.reset()
   before every test function.
+
+  ## Full-stack containerization
+- [x] Whole stack (app + database) starts with one command: docker compose up
+
+  Postgres healthcheck (pg_isready) gates the api service's startup via
+  depends_on: condition: service_healthy -- api-1 only starts after
+  db-1 reports Healthy, avoiding a startup race condition.
+
+- [x] Data persists across a full docker compose down + up
+
+  Created a widget (id 8aaa90bc-6bd8-46d5-bd2f-ff9ce84c3914) via the
+  containerized API, then ran:
+
+docker compose down
+docker compose up
+
+  Both containers were fully destroyed and recreated. Fetching the same
+  widget id afterward still returned it (200 OK, unchanged data) --
+  confirming the named volume (widgetdata) keeps Postgres's files on
+  disk independent of container lifecycle.
+  

@@ -1,0 +1,27 @@
+services:
+  api:
+    build: .
+    ports: ["8000:8000"]
+    environment:
+      DATABASE_URL: postgresql+psycopg://postgres:dev@db:5432/widgets
+      JWT_SECRET: changeme-to-something-random
+      GEO_PROVIDER_A_URL: http://ip-api.com/json
+      GEO_PROVIDER_B_URL: https://ipapi.co
+    depends_on:
+      db:
+        condition: service_healthy
+  db:
+    image: postgres
+    environment:
+      POSTGRES_PASSWORD: dev
+      POSTGRES_DB: widgets
+    volumes:
+      - widgetdata:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 2s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  widgetdata:
